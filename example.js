@@ -1,5 +1,5 @@
 var fs = require('fs');
-var Steam = require('steam');
+var Steam = require('steam-with-proxy');
 
 // if we've saved a server list, use it
 if (fs.existsSync('servers')) {
@@ -10,48 +10,71 @@ var steamClient = new Steam.SteamClient();
 var steamUser = new Steam.SteamUser(steamClient);
 var steamFriends = new Steam.SteamFriends(steamClient);
 
-steamClient.connect();
-steamClient.on('connected', function() {
-  steamUser.logOn({
-    account_name: 'username',
-    password: 'password'
-  });
-});
+var server = Steam.servers[Math.floor(Math.random() * Steam.servers.length)];
 
-steamClient.on('logOnResponse', function(logonResp) {
-  if (logonResp.eresult == Steam.EResult.OK) {
-    console.log('Logged in!');
-    steamFriends.setPersonaState(Steam.EPersonaState.Online); // to display your bot's status as "Online"
-    steamFriends.setPersonaName('Haruhi'); // to change its nickname
-    steamFriends.joinChat('103582791431621417'); // the group's SteamID as a string
-  }
-});
+const options = {
+  proxy: {
+    host: '98.185.94.76', // ipv4 or ipv6 or hostname
+    port: 4145,
+    type: 5 // Proxy version (4 or 5)
+  },
+ 
+  command: 'connect', // SOCKS command (createConnection factory function only supports the connect command)
+ 
+  destination: server
+};
+SocksClient.createConnection(options, (err, info) => {
+  if (!err) {
+    console.log(info.socket);
+        
+    steamClient.connect({customSocket:info.socket});
+    steamClient.on('connected', function() {
+      steamUser.logOn({
+        account_name: 'username',
+        password: 'password'
+      });
+    });
 
-steamClient.on('servers', function(servers) {
-  fs.writeFileSync('servers', JSON.stringify(servers));
-});
+    steamClient.on('logOnResponse', function(logonResp) {
+      if (logonResp.eresult == Steam.EResult.OK) {
+        console.log('Logged in!');
+        steamFriends.setPersonaState(Steam.EPersonaState.Online); // to display your bot's status as "Online"
+        steamFriends.setPersonaName('Haruhi'); // to change its nickname
+        steamFriends.joinChat('103582791431621417'); // the group's SteamID as a string
+      }
+    });
 
-steamFriends.on('chatInvite', function(chatRoomID, chatRoomName, patronID) {
-  console.log('Got an invite to ' + chatRoomName + ' from ' + steamFriends.personaStates[patronID].player_name);
-  steamFriends.joinChat(chatRoomID); // autojoin on invite
-});
+    steamClient.on('servers', function(servers) {
+      fs.writeFileSync('servers', JSON.stringify(servers));
+    });
 
-steamFriends.on('message', function(source, message, type, chatter) {
-  // respond to both chat room and private messages
-  console.log('Received message: ' + message);
-  if (message == 'ping') {
-    steamFriends.sendMessage(source, 'pong', Steam.EChatEntryType.ChatMsg); // ChatMsg by default
-  }
-});
+    steamFriends.on('chatInvite', function(chatRoomID, chatRoomName, patronID) {
+      console.log('Got an invite to ' + chatRoomName + ' from ' + steamFriends.personaStates[patronID].player_name);
+      steamFriends.joinChat(chatRoomID); // autojoin on invite
+    });
 
-steamFriends.on('chatStateChange', function(stateChange, chatterActedOn, steamIdChat, chatterActedBy) {
-  if (stateChange == Steam.EChatMemberStateChange.Kicked && chatterActedOn == steamClient.steamID) {
-    steamFriends.joinChat(steamIdChat);  // autorejoin!
-  }
-});
+    steamFriends.on('message', function(source, message, type, chatter) {
+      // respond to both chat room and private messages
+      console.log('Received message: ' + message);
+      if (message == 'ping') {
+        steamFriends.sendMessage(source, 'pong', Steam.EChatEntryType.ChatMsg); // ChatMsg by default
+      }
+    });
 
-steamFriends.on('clanState', function(clanState) {
-  if (clanState.announcements.length) {
-    console.log('Group with SteamID ' + clanState.steamid_clan + ' has posted ' + clanState.announcements[0].headline);
+    steamFriends.on('chatStateChange', function(stateChange, chatterActedOn, steamIdChat, chatterActedBy) {
+      if (stateChange == Steam.EChatMemberStateChange.Kicked && chatterActedOn == steamClient.steamID) {
+        steamFriends.joinChat(steamIdChat);  // autorejoin!
+      }
+    });
+
+    steamFriends.on('clanState', function(clanState) {
+      if (clanState.announcements.length) {
+        console.log('Group with SteamID ' + clanState.steamid_clan + ' has posted ' + clanState.announcements[0].headline);
+      }
+    });
+
+
+  } else {
+    // Handle errors
   }
 });
