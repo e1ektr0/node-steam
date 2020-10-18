@@ -1,6 +1,6 @@
 {
   "name": "steam-with-proxy",
-  "version": "1.4.17",
+  "version": "1.4.18",
   "description": "Lets you interface with Steam without running an actual Steam client",
   "license": "MIT",
   "author": "Nikolai Vavilov <vvnicholas@gmail.com>",
